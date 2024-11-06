@@ -1,0 +1,102 @@
+{
+    "name": "vscode-ai-context-builder",
+    "displayName": "AI Context Builder",
+    "description": "Give file paths and information to build a single file with context for AI",
+    "version": "0.0.1",
+    "publisher": "freewind",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+    ],
+    "main": "./out/extension.js",
+    "packageManager": "pnpm@8.6.12+sha512.1336b80b948efd7979218a33ba96d9e4d380e6578144f6319979977deec6e3fe2e0a444b864b3ce2b077dda8adc4d654fee32b9c31868f0acb92da0abcf8ea1c",
+    "devDependencies": {
+        "@types/node": "^16.18.0",
+        "@types/vscode": "^1.80.0",
+        "@vscode/vsce": "^2.22.0",
+        "typescript": "^5.2.2",
+        "@types/yaml": "^1.9.7",
+        "rimraf": "^5.0.0",
+        "vite": "^5.0.0"
+    },
+    "scripts": {
+        "build": "vite build",
+        "watch": "vite build --watch",
+        "prepackage": "rimraf out && vite build",
+        "package": "vsce package --no-dependencies"
+    },
+    "icon": "images/icon.png",
+    "contributes": {
+        "views": {
+            "explorer": [
+                {
+                    "id": "aiContextBuilderView",
+                    "name": "AI Context Builder",
+                    "visibility": "visible"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "aiContextBuilder.createNew",
+                "title": "Create New Context File",
+                "icon": "$(add)"
+            },
+            {
+                "command": "aiContextBuilder.generate",
+                "title": "Generate",
+                "icon": "$(zap)"
+            },
+            {
+                "command": "aiContextBuilder.rename",
+                "title": "Rename",
+                "icon": "$(edit)"
+            },
+            {
+                "command": "aiContextBuilder.duplicate",
+                "title": "Duplicate",
+                "icon": "$(copy)"
+            },
+            {
+                "command": "aiContextBuilder.delete",
+                "title": "Delete",
+                "icon": "$(trash)"
+            }
+        ],
+        "menus": {
+            "view/title": [
+                {
+                    "command": "aiContextBuilder.createNew",
+                    "when": "view == aiContextBuilderView",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "aiContextBuilder.generate",
+                    "when": "view == aiContextBuilderView",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "aiContextBuilder.rename",
+                    "when": "view == aiContextBuilderView",
+                    "group": "inline@2"
+                },
+                {
+                    "command": "aiContextBuilder.duplicate",
+                    "when": "view == aiContextBuilderView",
+                    "group": "inline@3"
+                },
+                {
+                    "command": "aiContextBuilder.delete",
+                    "when": "view == aiContextBuilderView",
+                    "group": "inline@4"
+                }
+            ]
+        }
+    }
+}
