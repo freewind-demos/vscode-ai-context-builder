@@ -1,13 +1,16 @@
-import { parse } from 'yaml';
 import * as path from 'path';
 import { readFileContent } from './readFileContent';
+import { parseContextFile } from './parseContextFile';
+import { Sections } from './types';
 
-export async function generateContent(yamlContent: string, workspaceRoot: string): Promise<string> {
+export async function generateContent(markdownContent: string, workspaceRoot: string): Promise<string> {
     try {
-        const data = parse(yamlContent);
         let content = '你是一个资深的程序员，对于各种语言、框架、和最佳实践都有非常丰富的经验，擅长从样例代码中学习风格和模式。帮我完成以下编程相关的任务，谢谢。\n\n';
 
-        // 先检查所有文件，过滤掉不存在的
+        // 使用 parseContextFile 解析内容
+        const sections = parseContextFile(markdownContent);
+
+        // 检查文件是否存在
         const checkFile = async (filePath: string): Promise<boolean> => {
             try {
                 const trimmedPath = filePath.trim();
@@ -21,53 +24,45 @@ export async function generateContent(yamlContent: string, workspaceRoot: string
             }
         };
 
-        // 处理参考文件（数组格式）
-        const allReferenceFiles = Array.isArray(data.参考文件) ? data.参考文件.map((item: any) => item.trim()) : [];
+        // 处理参考文件
         const referenceFiles = await Promise.all(
-            allReferenceFiles.map(async (file: string) => ({ file, exists: await checkFile(file) }))
+            sections['参考文件'].map(async file => ({ file, exists: await checkFile(file) }))
         ).then(results => results.filter(r => r.exists).map(r => r.file));
 
         if (referenceFiles.length > 0) {
-            content += `首先你有 ${referenceFiles.length} 个文件需要参考。尽量理解其内容、风格和原理，在之后的任务里会用到：\n\n`;
-            content += referenceFiles.join('\n') + '\n\n';
-        }
-
-        // 处理 AI 注意事项
-        const aiNotes = Array.isArray(data.AI请注意) ? data.AI请注意.filter(Boolean) : [];
-        if (aiNotes.length > 0) {
-            content += '在做任务前，请注意：\n\n';
-            content += aiNotes.map((item: string) => `- ${item}`).join('\n') + '\n\n';
+            content += '<参考文件>\n';
+            content += referenceFiles.map(file => `  - ${file}`).join('\n');
+            content += '\n</参考文件>\n\n';
         }
 
         // 处理任务相关文件
-        const allTaskFiles = Array.isArray(data.任务文件) ? data.任务文件.map((item: any) => item.trim()) : [];
         const taskFiles = await Promise.all(
-            allTaskFiles.map(async (file: string) => ({ file, exists: await checkFile(file) }))
+            sections['任务文件'].map(async file => ({ file, exists: await checkFile(file) }))
         ).then(results => results.filter(r => r.exists).map(r => r.file));
 
         if (taskFiles.length > 0) {
-            content += '任务相关文件是：\n\n';
-            content += taskFiles.join('\n') + '\n\n';
+            content += '<任务文件>\n';
+            content += taskFiles.map(file => `  - ${file}`).join('\n');
+            content += '\n</任务文件>\n\n';
+        }
+
+        // 处理 AI 注意事项
+        if (sections['AI请注意']) {
+            content += '<AI请注意>\n';
+            content += sections['AI请注意'].split('\n').map(line => `  - ${line}`).join('\n');
+            content += '\n</AI请注意>\n\n';
         }
 
         // 处理任务目标
-        if (data.任务目标 && data.任务目标.trim()) {
-            content += '你的任务是：\n\n';
-            content += data.任务目标.trim() + '\n\n';
-        }
-
-        // 列出需要处理的文件
-        if (taskFiles.length > 0) {
-            content += '请尽可能在一次回复中就处理完以下文件：\n\n';
-            content += taskFiles.join('\n') + '\n\n';
+        if (sections['任务目标']) {
+            content += '<任务目标>\n';
+            content += sections['任务目标'].split('\n').map(line => `    ${line}`).join('\n');
+            content += '\n</任务目标>\n\n';
         }
 
         // 添加文件内容
         const allFiles = [...new Set([...referenceFiles, ...taskFiles])];
         if (allFiles.length > 0) {
-            content += '以下是前边提到的文件内容\n\n';
-
-            // 处理所有文件内容
             for (const filePath of allFiles) {
                 const trimmedPath = filePath.trim();
                 const fullPath = path.isAbsolute(trimmedPath) 
@@ -81,7 +76,7 @@ export async function generateContent(yamlContent: string, workspaceRoot: string
 
         return content;
     } catch (error) {
-        console.error('Error parsing YAML:', error);
+        console.error('Error parsing content:', error);
         throw error;
     }
 } 

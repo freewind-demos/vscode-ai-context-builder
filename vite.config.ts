@@ -20,4 +20,8 @@ export default defineConfig({
         minify: false,
         emptyOutDir: true
     },
+    test: {
+        globals: true,
+        environment: 'node'
+    }
 }); 

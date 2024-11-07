@@ -31,7 +31,7 @@ class ContextFileProvider implements vscode.TreeDataProvider<ContextFile> {
         const files = await vscode.workspace.findFiles(
             new vscode.RelativePattern(
                 vscode.Uri.file(contextDir),
-                'ai-context*.yaml'
+                'ai-context*.md'
             )
         );
 
@@ -53,17 +53,13 @@ class ContextFile extends vscode.TreeItem {
     ) {
         super(label, collapsibleState);
 
-        // 添加点击时打开文件的命令
         this.command = {
             command: 'vscode.open',
             title: 'Open File',
             arguments: [vscode.Uri.file(filePath)]
         };
 
-        // 设置文件类型为 yaml，这样会使用 VSCode 的 YAML 文件图标
         this.resourceUri = vscode.Uri.file(filePath);
-
-        // 可选：添加工具提示显示完整路径
         this.tooltip = filePath;
     }
 }
@@ -92,17 +88,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
         const contextDir = getContextDirectory(workspaceFolders[0]!);
 
-        // 读取目录中所有的 yaml 文件
+        // 读取目录中所有的 md 文件
         const files = await vscode.workspace.findFiles(
             new vscode.RelativePattern(
                 vscode.Uri.file(contextDir),
-                'ai-context*.yaml'
+                'ai-context*.md'
             )
         );
 
         // 找出最大的数字
         let maxIndex = 0;
-        const regex = /ai-context-(\d+)\.yaml$/;
+        const regex = /ai-context-(\d+)\.md$/;
 
         files.forEach(file => {
             const match = path.basename(file.fsPath).match(regex);
@@ -113,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext) {
         });
 
         // 生成新文件名
-        let fileName = files.length === 0 ? 'ai-context.yaml' : `ai-context-${maxIndex + 1}.yaml`;
+        let fileName = files.length === 0 ? 'ai-context.md' : `ai-context-${maxIndex + 1}.md`;
 
         const filePath = path.join(contextDir, fileName);
 
@@ -136,20 +132,20 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            // 读取 YAML 文件内容
-            const yamlContent = await fs.promises.readFile(file.filePath, 'utf8');
+            // 读取文件内容
+            const content = await fs.promises.readFile(file.filePath, 'utf8');
             
             // 生成内容
-            const content = await generateContent(yamlContent, workspaceFolders[0]!.uri.fsPath);
+            const generatedContent = await generateContent(content, workspaceFolders[0]!.uri.fsPath);
             
             // 生成文件名
             const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0]!;
-            const baseName = path.basename(file.filePath, '.yaml');
+            const baseName = path.basename(file.filePath, '.md');
             const fileName = `${baseName}-${timestamp}.txt`;
 
             // 写入文件
             const newFilePath = path.join(workspaceFolders[0]!.uri.fsPath, fileName);
-            await fs.promises.writeFile(newFilePath, content, 'utf8');
+            await fs.promises.writeFile(newFilePath, generatedContent, 'utf8');
             
             vscode.window.showInformationMessage(`Generated: ${fileName}`);
             
@@ -177,13 +173,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 复制文件
     const duplicateCommand = vscode.commands.registerCommand('aiContextBuilder.duplicate', async (file: ContextFile) => {
-        const baseName = path.basename(file.filePath, '.yaml');
+        const baseName = path.basename(file.filePath, '.md');
         let index = 1;
-        let newFileName = `${baseName}.copy${index}.yaml`;
+        let newFileName = `${baseName}.copy${index}.md`;
 
         while (fs.existsSync(path.join(path.dirname(file.filePath), newFileName))) {
             index++;
-            newFileName = `${baseName}.copy${index}.yaml`;
+            newFileName = `${baseName}.copy${index}.md`;
         }
 
         const newPath = path.join(path.dirname(file.filePath), newFileName);
@@ -238,7 +234,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // 添加复制所有文件路径的命令
     const copyAllFilePathsCommand = vscode.commands.registerCommand('aiContextBuilder.copyAllFilePaths', async (uri: vscode.Uri, uris: vscode.Uri[]) => {
         try {
-            // 如果是多选，使用 uris，否则���用单个 uri
+            // 如果是多选，使用 uris，否则用单个 uri
             const selectedUris = uris || [uri];
             const allPaths: string[] = [];
 

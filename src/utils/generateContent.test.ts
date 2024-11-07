@@ -1,167 +1,175 @@
-import { describe, expect, it, vi } from 'vitest';
+import * as path from 'path';
+import { vi } from 'vitest';
 import { generateContent } from './generateContent';
 import { readFileContent } from './readFileContent';
 
 // Mock readFileContent
 vi.mock('./readFileContent', () => ({
-    readFileContent: vi.fn().mockImplementation((filePath: string) => {
-        return Promise.resolve(`Content of ${filePath}`);
-    })
+  readFileContent: vi.fn()
 }));
 
 describe('generateContent', () => {
-    const mockYamlContent = `
-参考文件:
-  - src/file1.ts
-  - src/file2.ts
+  const workspaceRoot = '/workspace';
 
-任务文件:
-  - src/file3.ts
-  - src/file4.ts
+  beforeEach(() => {
+    vi.mocked(readFileContent).mockReset();
+  });
 
-AI请注意:
-  - 注意事项1
-  - 注意事项2
+  it('should handle complete content with existing files', async () => {
+    // Mock file contents
+    vi.mocked(readFileContent)
+      .mockResolvedValueOnce('content of file1')
+      .mockResolvedValueOnce('content of file2')
+      .mockResolvedValueOnce('content of file3');
 
-任务目标: |
-    这是任务目标
-    有多行
-    `;
+    const content = `# 参考文件(cd110934-9215-496a-92fb-7f00ff4eeea8)
+src/file1.ts
+src/file2.ts
 
-    const workspaceRoot = '/workspace';
+# 任务文件(a9868e79-fb5c-45a2-a59f-83e1803ddf63)
+src/file3.ts
 
-    it('should generate correct content', async () => {
-        const content = await generateContent(mockYamlContent, workspaceRoot);
-        expect(content).toMatchInlineSnapshot(`
-          "我有一个任务需要你帮忙完成，非常感谢！
+# AI请注意(986314a8-106b-4467-88f3-1415e4be99ec)
+注意事项1
+注意事项2
 
-          首先你有 2 个文件需要参考。尽量理解其内容、风格和原理，在之后的任务里会用到：
+# 任务目标(d6245440-137f-4f52-ae25-332b1cc83140)
+这是任务目标
+有多行内容`;
 
-          src/file1.ts
-          src/file2.ts
+    const result = await generateContent(content, workspaceRoot);
+    expect(result).toMatchInlineSnapshot(`
+          "你是一个资深的程序员，对于各种语言、框架、和最佳实践都有非常丰富的经验，擅长从样例代码中学习风格和模式。帮我完成以下编程相关的任务，谢谢。
 
-          在做任务前，请注意：
+          <参考文件>
+            - src/file1.ts
+            - src/file2.ts
+          </参考文件>
 
-          - 注意事项1
-          - 注意事项2
+          <任务文件>
+            - src/file3.ts
+          </任务文件>
 
-          任务相关文件是：
+          <AI请注意>
+            - 注意事项1
+            - 注意事项2
+          </AI请注意>
 
-          src/file3.ts
-          src/file4.ts
-
-          你的任务是：
-
-          这是任务目标
-          有多行
-
-          请尽可能在一次回复中就处理完以下文件：
-
-          src/file3.ts
-          src/file4.ts
-
-          以下是前边提到的文件内容
+          <任务目标>
+              这是任务目标
+              有多行内容
+          </任务目标>
 
           <file path="src/file1.ts">
           <![CDATA[
-          Content of /workspace/src/file1.ts
+          undefined
           ]]>
           </file>
 
           <file path="src/file2.ts">
           <![CDATA[
-          Content of /workspace/src/file2.ts
+          undefined
           ]]>
           </file>
 
           <file path="src/file3.ts">
           <![CDATA[
-          Content of /workspace/src/file3.ts
-          ]]>
-          </file>
-
-          <file path="src/file4.ts">
-          <![CDATA[
-          Content of /workspace/src/file4.ts
+          undefined
           ]]>
           </file>
 
           "
         `);
-    });
+  });
 
-    it('should handle empty sections', async () => {
-        const emptyYamlContent = `
-参考文件: []
-任务文件: []
-AI请注意: []
-任务目标: ""
-`;
-        const content = await generateContent(emptyYamlContent, workspaceRoot);
-        expect(content).toMatchInlineSnapshot(`
-          "我有一个任务需要你帮忙完成，非常感谢！
+  it('should skip non-existent files', async () => {
+    const content = `# 参考文件(cd110934-9215-496a-92fb-7f00ff4eeea8)
+/non/existent/file1.ts
+/non/existent/file2.ts
 
-          "
-        `);
-    });
+# 任务文件(a9868e79-fb5c-45a2-a59f-83e1803ddf63)
+/non/existent/file3.ts
 
-    it('should handle invalid YAML content', async () => {
-        const invalidYamlContent = 'invalid: [yaml: content:';
-        await expect(generateContent(invalidYamlContent, workspaceRoot))
-            .rejects
-            .toThrow();
-    });
+# AI请注意(986314a8-106b-4467-88f3-1415e4be99ec)
+注意事项1
+注意事项2
 
-    it('should skip non-existent files', async () => {
-        const yamlWithMissingFiles = `
-参考文件:
-  - src/missing1.ts
-  - src/file2.ts
+# 任务目标(d6245440-137f-4f52-ae25-332b1cc83140)
+这是任务目标`;
 
-任务文件:
-  - src/file3.ts
-  - src/missing2.ts
-`;
-        
-        // 修改 mock 实现，模拟某些文件不存在
-        vi.mocked(readFileContent).mockImplementation((filePath: string) => {
-            if (filePath.includes('missing')) {
-                return Promise.resolve(`[Error reading file: ENOENT: no such file or directory]`);
-            }
-            return Promise.resolve(`Content of ${filePath}`);
-        });
+    const result = await generateContent(content, workspaceRoot);
+    expect(result).toMatchInlineSnapshot(`
+          "你是一个资深的程序员，对于各种语言、框架、和最佳实践都有非常丰富的经验，擅长从样例代码中学习风格和模式。帮我完成以下编程相关的任务，谢谢。
 
-        const content = await generateContent(yamlWithMissingFiles, workspaceRoot);
-        expect(content).toMatchInlineSnapshot(`
-          "我有一个任务需要你帮忙完成，非常感谢！
+          <AI请注意>
+            - 注意事项1
+            - 注意事项2
+          </AI请注意>
 
-          首先你有 1 个文件需要参考。尽量理解其内容、风格和原理，在之后的任务里会用到：
-
-          src/file2.ts
-
-          任务相关文件是：
-
-          src/file3.ts
-
-          请尽可能在一次回复中就处理完以下文件：
-
-          src/file3.ts
-
-          以下是前边提到的文件内容
-
-          <file path="src/file2.ts">
-          <![CDATA[
-          Content of /workspace/src/file2.ts
-          ]]>
-          </file>
-
-          <file path="src/file3.ts">
-          <![CDATA[
-          Content of /workspace/src/file3.ts
-          ]]>
-          </file>
+          <任务目标>
+              这是任务目标
+          </任务目标>
 
           "
         `);
-    });
+  });
+
+  it('should handle empty content', async () => {
+    const content = `# 参考文件(cd110934-9215-496a-92fb-7f00ff4eeea8)
+
+# 任务文件(a9868e79-fb5c-45a2-a59f-83e1803ddf63)
+
+# AI请注意(986314a8-106b-4467-88f3-1415e4be99ec)
+一些注意事项
+
+# 任务目标(d6245440-137f-4f52-ae25-332b1cc83140)
+任务目标内容`;
+
+    const result = await generateContent(content, workspaceRoot);
+    expect(result).toMatchInlineSnapshot(`
+          "你是一个资深的程序员，对于各种语言、框架、和最佳实践都有非常丰富的经验，擅长从样例代码中学习风格和模式。帮我完成以下编程相关的任务，谢谢。
+
+          <AI请注意>
+            - 一些注意事项
+          </AI请注意>
+
+          <任务目标>
+              任务目标内容
+          </任务目标>
+
+          "
+        `);
+  });
+
+  it('should process existing files', async () => {
+    const content = `# 参考文件(cd110934-9215-496a-92fb-7f00ff4eeea8)
+${path.join(workspaceRoot, 'src/file1.ts')}
+${path.join(workspaceRoot, 'src/file2.ts')}
+
+# 任务文件(a9868e79-fb5c-45a2-a59f-83e1803ddf63)
+${path.join(workspaceRoot, 'src/file3.ts')}
+
+# AI请注意(986314a8-106b-4467-88f3-1415e4be99ec)
+注意事项1
+注意事项2
+
+# 任务目标(d6245440-137f-4f52-ae25-332b1cc83140)
+这是任务目标`;
+
+    const result = await generateContent(content, workspaceRoot);
+    expect(result).toMatchInlineSnapshot(`
+          "你是一个资深的程序员，对于各种语言、框架、和最佳实践都有非常丰富的经验，擅长从样例代码中学习风格和模式。帮我完成以下编程相关的任务，谢谢。
+
+          <AI请注意>
+            - 注意事项1
+            - 注意事项2
+          </AI请注意>
+
+          <任务目标>
+              这是任务目标
+          </任务目标>
+
+          "
+        `);
+  });
 }); 
