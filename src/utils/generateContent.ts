@@ -1,6 +1,6 @@
 import { parse } from 'yaml';
 import * as path from 'path';
-import * as fs from 'fs';
+import { readFileContent } from './readFileContent';
 
 export async function generateContent(yamlContent: string, workspaceRoot: string): Promise<string> {
     try {
@@ -58,14 +58,5 @@ export async function generateContent(yamlContent: string, workspaceRoot: string
     } catch (error) {
         console.error('Error parsing YAML:', error);
         throw error;
-    }
-}
-
-export async function readFileContent(filePath: string): Promise<string> {
-    try {
-        return await fs.promises.readFile(filePath, 'utf8');
-    } catch (error) {
-        console.error(`Error reading file ${filePath}:`, error);
-        return `[Error reading file: ${error instanceof Error ? error.message : 'Unknown error'}]`;
     }
 } 

@@ -1,9 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { getAllFilePaths, getContextDirectory } from './utils/files';
-import { getTemplateContent, getTemplatePath } from './utils/template';
-import { generateContent, readFileContent } from './utils/yaml';
+import { generateContent } from './utils/generateContent';
+import { getAllFilePaths } from './utils/getAllFilePaths';
+import { getContextDirectory } from './utils/getContextDirectory';
+import { getTemplateContent } from './utils/getTemplateContent';
+import { getTemplatePath } from './utils/getTemplatePath';
+import { readFileContent } from './utils/readFileContent';
 
 class ContextFileProvider implements vscode.TreeDataProvider<ContextFile> {
     private _onDidChangeTreeData: vscode.EventEmitter<ContextFile | undefined | null | void> = new vscode.EventEmitter<ContextFile | undefined | null | void>();
@@ -25,14 +28,14 @@ class ContextFileProvider implements vscode.TreeDataProvider<ContextFile> {
 
         const workspaceFolder = workspaceFolders[0]!;
         const contextDir = getContextDirectory(workspaceFolder);
-        
+
         const files = await vscode.workspace.findFiles(
             new vscode.RelativePattern(
                 vscode.Uri.file(contextDir),
                 'ai-context*.yaml'
             )
         );
-        
+
         return files
             .map(file => new ContextFile(
                 path.basename(file.fsPath),
@@ -50,17 +53,17 @@ class ContextFile extends vscode.TreeItem {
         public readonly collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(label, collapsibleState);
-        
+
         // 添加点击时打开文件的命令
         this.command = {
             command: 'vscode.open',
             title: 'Open File',
             arguments: [vscode.Uri.file(filePath)]
         };
-        
+
         // 设置文件类型为 yaml，这样会使用 VSCode 的 YAML 文件图标
         this.resourceUri = vscode.Uri.file(filePath);
-        
+
         // 可选：添加工具提示显示完整路径
         this.tooltip = filePath;
     }
@@ -70,12 +73,12 @@ export async function activate(context: vscode.ExtensionContext) {
     // 创建输出面板
     const outputChannel = vscode.window.createOutputChannel("AI Context Builder");
     outputChannel.show();
-    
+
     outputChannel.appendLine('Starting AI Context Builder activation...');
-    
+
     const contextFileProvider = new ContextFileProvider();
     outputChannel.appendLine('Created ContextFileProvider');
-    
+
     // 注册 TreeDataProvider
     vscode.window.registerTreeDataProvider('aiContextBuilderView', contextFileProvider);
     outputChannel.appendLine('Registered TreeDataProvider for aiContextBuilderView');
@@ -89,7 +92,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 
         const contextDir = getContextDirectory(workspaceFolders[0]!);
-        
+
         // 读取目录中所有的 yaml 文件
         const files = await vscode.workspace.findFiles(
             new vscode.RelativePattern(
@@ -97,11 +100,11 @@ export async function activate(context: vscode.ExtensionContext) {
                 'ai-context*.yaml'
             )
         );
-        
+
         // 找出最大的数字
         let maxIndex = 0;
         const regex = /ai-context-(\d+)\.yaml$/;
-        
+
         files.forEach(file => {
             const match = path.basename(file.fsPath).match(regex);
             if (match && match[1]) {
@@ -114,15 +117,15 @@ export async function activate(context: vscode.ExtensionContext) {
         let fileName = files.length === 0 ? 'ai-context.yaml' : `ai-context-${maxIndex + 1}.yaml`;
 
         const filePath = path.join(contextDir, fileName);
-        
+
         // 使用模板内容创建文件
         const templateContent = getTemplateContent(workspaceFolders[0]!);
         fs.writeFileSync(filePath, templateContent);
-        
+
         // 打开新创建的文件
         const document = await vscode.workspace.openTextDocument(filePath);
         await vscode.window.showTextDocument(document);
-        
+
         contextFileProvider.refresh();
     });
 
@@ -136,7 +139,7 @@ export async function activate(context: vscode.ExtensionContext) {
         try {
             // 读取 YAML 文件内容
             const yamlContent = await readFileContent(file.filePath);
-            
+
             // 生成新内容
             const content = await generateContent(yamlContent, workspaceFolders[0]!.uri.fsPath);
 
@@ -145,12 +148,12 @@ export async function activate(context: vscode.ExtensionContext) {
             const baseName = path.basename(file.filePath, '.yaml');
             const newFileName = `${baseName}-${timestamp}.txt`;
             const newFilePath = path.join(workspaceFolders[0]!.uri.fsPath, newFileName);
-            
+
             // 写入文件
             await fs.promises.writeFile(newFilePath, content, 'utf8');
-            
+
             vscode.window.showInformationMessage(`Generated: ${newFileName}`);
-            
+
             // 打开生成的文件
             const document = await vscode.workspace.openTextDocument(newFilePath);
             await vscode.window.showTextDocument(document);
@@ -178,7 +181,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const baseName = path.basename(file.filePath, '.yaml');
         let index = 1;
         let newFileName = `${baseName}.copy${index}.yaml`;
-        
+
         while (fs.existsSync(path.join(path.dirname(file.filePath), newFileName))) {
             index++;
             newFileName = `${baseName}.copy${index}.yaml`;
@@ -222,7 +225,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 
         const templatePath = getTemplatePath(workspaceFolders[0]!);
-        
+
         // 确保模板文件存在
         if (!fs.existsSync(templatePath)) {
             getTemplateContent(workspaceFolders[0]!); // 这会创建默认模板
@@ -249,7 +252,7 @@ export async function activate(context: vscode.ExtensionContext) {
             const content = allPaths.join('\n');
             const document = await vscode.workspace.openTextDocument();
             const editor = await vscode.window.showTextDocument(document);
-            
+
             // 插入文件路径
             await editor.edit(editBuilder => {
                 editBuilder.insert(new vscode.Position(0, 0), content);
@@ -274,4 +277,4 @@ export async function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('AI Context Builder activation completed');
 }
 
-export function deactivate() {}
+export function deactivate() { }
