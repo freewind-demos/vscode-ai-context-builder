@@ -10,9 +10,13 @@ export default defineConfig({
         },
         outDir: 'out',
         rollupOptions: {
-            external: ['vscode', 'path', 'fs', 'yaml'],
+            external: ['vscode', 'fs', 'path'],
+            output: {
+                format: 'cjs',
+                sourcemap: false,
+            }
         },
-        sourcemap: true,
+        sourcemap: false,
         minify: false,
         emptyOutDir: true
     },

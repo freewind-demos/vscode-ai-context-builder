@@ -10,9 +10,7 @@
     "categories": [
         "Other"
     ],
-    "activationEvents": [
-        "onStartupFinished"
-    ],
+    "activationEvents": [],
     "main": "./out/extension.js",
     "packageManager": "pnpm@8.6.12",
     "devDependencies": {
@@ -39,8 +37,7 @@
             "explorer": [
                 {
                     "id": "aiContextBuilderView",
-                    "name": "AI Context Builder",
-                    "visibility": "visible"
+                    "name": "AI Context Builder"
                 }
             ]
         },
