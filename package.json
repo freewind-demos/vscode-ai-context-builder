@@ -32,8 +32,7 @@
     "scripts": {
         "build": "vite build",
         "watch": "vite build --watch",
-        "prepackage": "rimraf out && vite build",
-        "package": "vsce package --no-dependencies",
+        "package": "rimraf out && vite build && vsce package --no-dependencies",
         "test": "vitest -u"
     },
     "icon": "images/icon.png",
