@@ -6,7 +6,6 @@ import { getAllFilePaths } from './utils/getAllFilePaths';
 import { getContextDirectory } from './utils/getContextDirectory';
 import { getTemplateContent } from './utils/getTemplateContent';
 import { getTemplatePath } from './utils/getTemplatePath';
-import { readFileContent } from './utils/readFileContent';
 
 class ContextFileProvider implements vscode.TreeDataProvider<ContextFile> {
     private _onDidChangeTreeData: vscode.EventEmitter<ContextFile | undefined | null | void> = new vscode.EventEmitter<ContextFile | undefined | null | void>();
@@ -83,7 +82,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.registerTreeDataProvider('aiContextBuilderView', contextFileProvider);
     outputChannel.appendLine('Registered TreeDataProvider for aiContextBuilderView');
 
-    // 创建新文件
+    // 创新文件
     const createNewCommand = vscode.commands.registerCommand('aiContextBuilder.createNew', async () => {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -131,29 +130,29 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 生成文件
     const generateCommand = vscode.commands.registerCommand('aiContextBuilder.generate', async (file: ContextFile) => {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            return;
-        }
-
         try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+
             // 读取 YAML 文件内容
-            const yamlContent = await readFileContent(file.filePath);
-
-            // 生成新内容
+            const yamlContent = await fs.promises.readFile(file.filePath, 'utf8');
+            
+            // 生成内容
             const content = await generateContent(yamlContent, workspaceFolders[0]!.uri.fsPath);
-
-            // 创建新文件
-            const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
+            
+            // 生成文件名
+            const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0]!;
             const baseName = path.basename(file.filePath, '.yaml');
-            const newFileName = `${baseName}-${timestamp}.txt`;
-            const newFilePath = path.join(workspaceFolders[0]!.uri.fsPath, newFileName);
+            const fileName = `${baseName}-${timestamp}.txt`;
 
             // 写入文件
+            const newFilePath = path.join(workspaceFolders[0]!.uri.fsPath, fileName);
             await fs.promises.writeFile(newFilePath, content, 'utf8');
-
-            vscode.window.showInformationMessage(`Generated: ${newFileName}`);
-
+            
+            vscode.window.showInformationMessage(`Generated: ${fileName}`);
+            
             // 打开生成的文件
             const document = await vscode.workspace.openTextDocument(newFilePath);
             await vscode.window.showTextDocument(document);
@@ -239,7 +238,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // 添加复制所有文件路径的命令
     const copyAllFilePathsCommand = vscode.commands.registerCommand('aiContextBuilder.copyAllFilePaths', async (uri: vscode.Uri, uris: vscode.Uri[]) => {
         try {
-            // 如果是多选，使用 uris，否则使用单个 uri
+            // 如果是多选，使用 uris，否则���用单个 uri
             const selectedUris = uris || [uri];
             const allPaths: string[] = [];
 
